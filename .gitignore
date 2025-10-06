@@ -39,3 +39,30 @@
 
 # debug information files
 *.dwo
+
+# Build artefacts
+build/
+cmake-build*/
+*.o
+*.out
+*.a
+*.dSYM/
+
+# Data/generated
+data/output/*
+data/results/*
+!data/output/.gitkeep
+!data/results/.gitkeep
+
+# Sistema opertativo
+*.DS_Store
+
+# Secretos
+*.env
+
+# Otros
+.vscode/
+.idea/
+.venv
+
+
