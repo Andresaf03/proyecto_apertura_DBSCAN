@@ -37,6 +37,14 @@
 *.out
 *.app
 
+# Named executables created locally
+/dbscan_serial
+/serial
+/serial_gcc
+/src/serial
+/src/serial_gcc
+/src/dbscan_serial
+
 # debug information files
 *.dwo
 
@@ -64,5 +72,4 @@ data/results/*
 .vscode/
 .idea/
 .venv
-
 
