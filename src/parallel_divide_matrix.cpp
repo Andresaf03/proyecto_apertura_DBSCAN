@@ -105,7 +105,7 @@ vector<Point> dbscan_parallel_p2(double epsilon, int min_samples, string ruta, i
                 const double dist = distancia(puntos[i], puntos[j]);
                 if (dist <= epsilon)
                 {
-// Actualizar contadores de forma atómica
+// Actualizar contadores de forma atómica (Causa cond carrera)
 #pragma omp atomic
                     ++vecinos[i];
 
