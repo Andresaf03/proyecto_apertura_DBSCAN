@@ -7,12 +7,13 @@
 #include <vector>   
 #include <filesystem>
 
-using namespace std;
 #define NOISE -1
 #define CORE1 1
 #define CORE2 2
 
-struct Point
+using namespace std;
+
+struct Point 
 {
     double x;
     double y;
@@ -73,87 +74,44 @@ vector<Point> leerCSV(const string &archivo)
     return puntos;
 }
 
-double **crearMatrizDistancias(const vector<Point> &puntos)
-{
-    const size_t n = puntos.size();
-    if (n == 0)
-    {
-        return nullptr;
-    }
-    double **matriz = new double *[n];
-    for (size_t i = 0; i < n; ++i)
-    {
-        matriz[i] = new double[n];
-    }
-    for (size_t i = 0; i < n; ++i)
-    {
-        matriz[i][i] = 0.0;
-        for (size_t j = i + 1; j < n; ++j)
-        {
-            const double dist = distancia(puntos[i], puntos[j]);
-            matriz[i][j] = dist;
-            matriz[j][i] = dist;
-        }
-    }
-    return matriz;
-}
-
-void liberarMatrizDistancias(double **matriz, size_t filas)
-{
-    if (!matriz)
-    {
-        return;
-    }
-    for (size_t i = 0; i < filas; ++i)
-    {
-        delete[] matriz[i];
-    }
-    delete[] matriz;
-}
-
 vector<Point> dbscan(double epsilon, int min_samples, string ruta)
 {
     string ruta_archivo = ruta;
     vector<Point> puntos = leerCSV(ruta_archivo);
     size_t n = puntos.size();
 
-    double **distancias = crearMatrizDistancias(puntos);
-
-    std::vector<int> vecinos(n, 0);
+    vector<int> vecinos(n, 0);
 
     for (size_t i = 0; i < n; ++i)
     {
-        for (size_t j = 0; j < n; ++j)
+        for (size_t j = i + 1; j < n; ++j)
         {
-            if (i == j)
-                continue;
-            if (distancias[i][j] <= epsilon)
+            const double dist = distancia(puntos[i], puntos[j]);
+            if (dist <= epsilon)
             {
                 ++vecinos[i];
+                ++vecinos[j];
+
+                if (vecinos[i] >= min_samples)
+                {
+                    puntos[i].label = CORE1;
+                }
+                if (vecinos[j] >= min_samples)
+                {
+                    puntos[j].label = CORE1;
+                }
+
+                if (puntos[i].label == CORE1 && puntos[j].label == NOISE)
+                {
+                    puntos[j].label = CORE2;
+                }
+                else if (puntos[j].label == CORE1 && puntos[i].label == NOISE)
+                {
+                    puntos[i].label = CORE2;
+                }
             }
         }
-        if (vecinos[i] >= min_samples)
-        {
-            puntos[i].label = CORE1;
-        }
     }
-
-    // Paso 2: upgrade a segundo orden si alcanzable desde un core
-    for (size_t i = 0; i < n; ++i)
-    {
-        if (puntos[i].label != NOISE)
-            continue;
-        for (size_t j = 0; j < n; ++j)
-        {
-            if (puntos[j].label == CORE1 && distancias[i][j] <= epsilon)
-            {
-                puntos[i].label = CORE2;
-                break;
-            }
-        }
-    }
-
-    liberarMatrizDistancias(distancias, n);
 
     return puntos;
 }
