@@ -52,6 +52,7 @@ cmake-build*/
 *.dSYM/
 
 # Data/generated
+data/input/*
 data/output/*
 data/results/*
 !data/output/.gitkeep
