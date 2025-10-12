@@ -149,7 +149,7 @@ int main(int argc, char** argv) {
         const std::size_t block_size = argc > 7 ? static_cast<std::size_t>(std::stoul(argv[7])) : 512;
 
         const std::vector<std::size_t> sizes = {
-            2000, 4000, 8000, 12000, 14000, 16000, 18000, 20000};
+            20000, 40000, 80000, 120000, 140000, 160000, 180000, 200000};
 
         const int virtual_cores = omp_get_max_threads();
         const std::vector<int> thread_options = {
