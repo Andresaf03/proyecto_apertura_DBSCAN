@@ -6,7 +6,10 @@
 
 using std::size_t;
 
-std::vector<Point> dbscan_parallel_full(const std::string& ruta, double epsilon, int min_samples, int num_threads) {
+std::vector<Point> dbscan_parallel_full(const std::string& ruta, 
+                                        double epsilon, 
+                                        int min_samples, 
+                                        int num_threads) {
     std::vector<Point> puntos = loadPoints(ruta);
     const size_t n = puntos.size();
     if (n == 0) {

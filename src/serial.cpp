@@ -50,7 +50,9 @@ double distanceSquared(const Point& a, const Point& b) {
     return dx * dx + dy * dy;
 }
 
-std::string writeResultsCSV(const std::vector<Point>& puntos, const std::string& output_dir, const std::string& etiqueta) {
+std::string writeResultsCSV(const std::vector<Point>& puntos, 
+                            const std::string& output_dir, 
+                            const std::string& etiqueta) {
     namespace fs = std::filesystem;
     if (!fs::exists(output_dir)) {
         fs::create_directories(output_dir);
@@ -72,7 +74,9 @@ std::string writeResultsCSV(const std::vector<Point>& puntos, const std::string&
     return archivo;
 }
 
-std::vector<Point> dbscan_serial(const std::string& ruta, double epsilon, int min_samples) {
+std::vector<Point> dbscan_serial(const std::string& ruta, 
+                                 double epsilon, 
+                                 int min_samples) {
     std::vector<Point> puntos = loadPoints(ruta);
     const size_t n = puntos.size();
     if (n == 0) {

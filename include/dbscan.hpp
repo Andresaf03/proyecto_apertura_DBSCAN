@@ -26,3 +26,4 @@ std::vector<Point> dbscan_serial(const std::string& ruta, double epsilon, int mi
 
 std::vector<Point> dbscan_parallel_full(const std::string& ruta, double epsilon, int min_samples, int num_threads = 0);
 
+std::vector<Point> dbscan_parallel_divided(const std::string& ruta, double epsilon, int min_samples, int num_threads = 0, std::size_t block_size = 512);

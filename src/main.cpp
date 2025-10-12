@@ -104,6 +104,39 @@ Stats runParallelFull(const std::string& ruta,
     return computeStats(tiempos);
 }
 
+Stats runParallelDivided(const std::string& ruta,
+                         double epsilon,
+                         int min_samples,
+                         int threads,
+                         int iterations,
+                         std::size_t block_size,
+                         std::vector<double>& tiempos,
+                         const std::string& output_dir,
+                         std::vector<Point>& ultimo,
+                         const std::vector<Point>& referencia_serial) {
+    if (threads > 0) {
+        omp_set_num_threads(threads);
+    }
+    tiempos.clear();
+    tiempos.reserve(iterations);
+    for (int i = 0; i < iterations; ++i) {
+        const double inicio = omp_get_wtime();
+        ultimo = dbscan_parallel_divided(ruta, epsilon, min_samples, threads, block_size);
+        tiempos.push_back(omp_get_wtime() - inicio);
+    }
+    const std::string salida =
+        writeResultsCSV(ultimo, output_dir, "parallel_divided");
+    std::cout << "  -> paralelo2 guardó: " << salida << '\n';
+
+    const std::size_t mismatches = countMismatches(referencia_serial, ultimo);
+    if (mismatches != 0) {
+        std::cout << "  (!) " << mismatches
+                  << " etiquetas difieren entre serial y paralelo2.\n";
+    }
+
+    return computeStats(tiempos);
+}
+
 }
 
 int main(int argc, char** argv) {
@@ -113,9 +146,10 @@ int main(int argc, char** argv) {
         const int iterations = argc > 4 ? std::stoi(argv[4]) : 10;
         const std::string output_dir = argc > 5 ? argv[5] : "data/output";
         const std::string results_file = argc > 6 ? argv[6] : "data/results/experiments.csv";
+        const std::size_t block_size = argc > 7 ? static_cast<std::size_t>(std::stoul(argv[7])) : 512;
 
         const std::vector<std::size_t> sizes = {
-            20000, 40000, 80000, 120000, 140000, 160000, 180000, 200000};
+            2000, 4000, 8000, 12000, 14000, 16000, 18000, 20000};
 
         const int virtual_cores = omp_get_max_threads();
         const std::vector<int> thread_options = {
@@ -132,6 +166,7 @@ int main(int argc, char** argv) {
 
         std::vector<double> tiempos_serial;
         std::vector<double> tiempos_par_full;
+        std::vector<double> tiempos_par_div;
 
         for (std::size_t n : sizes) {
             const std::string ruta = "data/input/" + std::to_string(n) + "_data.csv";
@@ -150,6 +185,7 @@ int main(int argc, char** argv) {
 
             csv << n << ",1,serial,"
                 << stats_serial.mean << ',' << stats_serial.stdev << '\n';
+            csv.flush();
 
             for (int threads : thread_options) {
                 std::cout << "  Hilos: " << threads << '\n';
@@ -161,13 +197,17 @@ int main(int argc, char** argv) {
 
                 csv << n << ',' << threads << ",parallel_full,"
                     << stats_par_full.mean << ',' << stats_par_full.stdev << '\n';
+                csv.flush();
 
-                // Parallel_2 pendiente:
-                // std::vector<double> tiempos_par_div;
-                // std::vector<Point> ultimo_par_div;
-                // const double promedio_par_div = runParallelDivided(...);
-                // csv << n << ',' << threads << ",parallel_divided,"
-                //     << promedio_par_div << ',' << std_par_div << '\n';
+                std::vector<Point> ultimo_par_div;
+                const Stats stats_par_div = runParallelDivided(
+                    ruta, epsilon, min_samples, threads,
+                    iterations, block_size, tiempos_par_div,
+                    output_dir, ultimo_par_div, ultimo_serial);
+
+                csv << n << ',' << threads << ",parallel_divided,"
+                    << stats_par_div.mean << ',' << stats_par_div.stdev << '\n';
+                csv.flush();
             }
         }
 
@@ -185,6 +225,8 @@ int main(int argc, char** argv) {
         argc > 4 ? std::stoi(argv[4]) : 0;
     const std::string output_dir =
         argc > 5 ? argv[5] : "data/output";
+    const std::size_t block_size =
+        argc > 6 ? static_cast<std::size_t>(std::stoul(argv[6])) : 512;
 
     std::cout << "Ruta: " << ruta << '\n'
               << "epsilon: " << epsilon << "  min_samples: " << min_samples
@@ -206,20 +248,38 @@ int main(int argc, char** argv) {
         1, tiempos_par_full, output_dir, resultado_paralelo, resultado_serial);
     const std::size_t mismatches = countMismatches(resultado_serial, resultado_paralelo);
 
+    std::vector<double> tiempos_par_div;
+    std::vector<Point> resultado_paralelo_div;
+    const Stats stats_par_div = runParallelDivided(
+        ruta, epsilon, min_samples, num_threads,
+        1, block_size, tiempos_par_div, output_dir,
+        resultado_paralelo_div, resultado_serial);
+    const std::size_t mismatches_div = countMismatches(resultado_serial, resultado_paralelo_div);
+
     std::cout << std::fixed << std::setprecision(6);
     std::cout << "Serial:    " << stats_serial.mean << " s\n";
     std::cout << "Paralelo1: " << stats_par_full.mean << " s\n";
     if (stats_par_full.mean > 0.0) {
         std::cout << "Speedup:   " << (stats_serial.mean / stats_par_full.mean) << "x\n";
     }
+    std::cout << "Paralelo2: " << stats_par_div.mean << " s\n";
+    if (stats_par_div.mean > 0.0) {
+        std::cout << "Speedup2:  " << (stats_serial.mean / stats_par_div.mean) << "x\n";
+    }
 
     if (mismatches == 0) {
-        std::cout << "Comparación: etiquetas iguales en ambas versiones.\n";
+        std::cout << "Comparación P1: etiquetas iguales entre serial y paralelo2.\n";
     } else {
         std::cout << "Comparación: " << mismatches
                   << " puntos con etiqueta distinta entre serial y paralelo.\n";
     }
 
-    std::cout << "\n(P2) versión paralela dividida queda pendiente.\n";
+    if (mismatches_div == 0) {
+        std::cout << "Comparación P2: etiquetas iguales entre serial y paralelo2.\n";
+    } else {
+        std::cout << "Comparación P2: " << mismatches_div
+                  << " puntos con etiqueta distinta entre serial y paralelo2.\n";
+    }
+
     return 0;
 }
