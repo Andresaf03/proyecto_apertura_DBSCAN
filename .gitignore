@@ -54,9 +54,7 @@ cmake-build*/
 # Data/generated
 data/input/*
 data/output/*
-data/results/*
 !data/output/.gitkeep
-!data/results/.gitkeep
 
 # Sistema opertativo
 *.DS_Store
