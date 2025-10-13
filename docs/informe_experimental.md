@@ -77,9 +77,17 @@ La configuración óptima identificada es claramente P2 con 20 hilos. Esta confi
 
 ## 8. Datos disponibles
 
-- `data/results/experiments.csv`: resultados consolidados del benchmark.
-- `data/output/`: CSV con etiquetas por punto para cada variante.
-- `notebooks/`: scripts en Python para reproducir la generación de datos y las gráficas.
+Para garantizar reproducibilidad completa de este trabajo, todos los datos experimentales y código de análisis están disponibles en la siguiente estructura de directorios:
+
+`data/results/experiments.csv` contiene la tabla consolidada de todos los resultados experimentales. Cada fila representa una configuración única de (tamaño de entrada, número de hilos, implementación) con su tiempo promedio de ejecución y desviación estándar calculados sobre 10 repeticiones.
+
+El directorio `data/output/` contiene archivos CSV individuales con las etiquetas asignadas por cada implementación para cada tamaño de entrada. Los nombres de archivo siguen el patrón `<n>_results_{serial|parallel_full|parallel_divided}.csv`. Cada archivo contiene las coordenadas (x, y) de cada punto junto con su etiqueta final (0 para NOISE, 1 para CORE1, 2 para CORE2). Estos archivos fueron utilizados para validar que las tres implementaciones producen resultados idénticos.
+
+El directorio `data/input/` contiene los datasets sintéticos generados con `make_blobs`. Estos archivos son reutilizables para experimentos adicionales con diferentes parámetros de DBSCAN o para validación cruzada de otras implementaciones del algoritmo.
+
+El directorio `notebooks/` contiene las libretas de Jupyter que implementan tanto la generación de datos como el análisis de resultados. `experiments.ipynb` genera los datasets sintéticos, procesa el archivo `experiments.csv` para calcular speedups, y produce todas las visualizaciones presentadas en este documento. `DBSCAN_noise.ipynb` proporciona herramientas de visualización interactiva para inspeccionar visualmente las clasificaciones producidas por cualquier implementación. Estas libretas están completamente documentadas con comentarios explicando cada paso del análisis, facilitando su reutilización o adaptación para experimentos futuros.
+
+Todo el código fuente de C++, incluyendo las tres implementaciones de DBSCAN y el framework de benchmarking, está disponible junto con un Makefile para compilación reproducible. Los compiladores y versiones de bibliotecas utilizados están documentados en el README del proyecto.
 
 ## 9. Conclusiones
 
