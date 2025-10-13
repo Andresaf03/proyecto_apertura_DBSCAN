@@ -36,4 +36,88 @@ Dentro del repositorio se incluye:
 
 ## Hallazgos principales
 
-Nuestra implementación logra un speed up de hasta **placeholder**x, con la estrategia de paralelización de **placeholder**.
+- La versión paralela P1 alcanza speedups de ~3.4× con 16 hilos en los datasets grandes.
+- La versión paralela P2, que trabaja por bloques, llega a ~3.9× con 8–16 hilos y `block_size = 512`.
+- Los archivos de resultados (`data/results/experiments.csv`) y las gráficas en `notebooks/experiments.ipynb` documentan el comportamiento completo.
+
+## Requisitos y compilación
+
+1. **Generar datasets**: abre `notebooks/experiments.ipynb` y ejecuta la sección de generación para crear `n_data.csv` en `data/input/`. Sin estos archivos, el binario no encontrará las rutas por defecto.
+2. **Entorno Python** (para notebooks y análisis):
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r src/requirements.txt
+   ```
+
+3. **Compilación C++** (OpenMP/C++17 probados con GCC 15 Homebrew):
+
+   ```bash
+   g++-15 -std=c++17 -Iinclude -fopenmp \
+       src/main.cpp src/serial.cpp src/parallel_1.cpp src/parallel_2.cpp \
+       -o dbscan
+   ```
+
+  *Si usas `clang++`, instala `libomp` y ajusta los flags.*
+
+## Uso
+
+- **Ejecución puntual (valores por defecto)**
+
+  ```bash
+  ./dbscan
+  ```
+
+  Usa `data/input/4000_data.csv`, `ε = 0.03`, `min_samples = 10`, `omp_get_max_threads()` hilos, salida en `data/output/` y `block_size = 512`.
+
+- **Ejecución puntual con argumentos**
+
+  ```bash
+  ./dbscan <ruta_csv> <epsilon> <min_samples> <num_threads> [directorio_salida] [block_size]
+  # Ejemplo
+  ./dbscan data/input/4000_data.csv 0.03 10 8 data/output 512
+  ```
+  
+  Los parámetros opcionales permiten cambiar la carpeta de resultados y el tamaño de bloque usado por P2.
+
+- **Benchmark (valores por defecto)**
+  
+  ```bash
+  ./dbscan --benchmark
+  ```
+  
+  Ejecuta los tamaños `{20k … 200k}` promediando 10 corridas por configuración y genera `data/results/experiments.csv`.
+
+- **Benchmark con argumentos**
+  
+  ```bash
+  ./dbscan --benchmark <epsilon> <min_samples> <iteraciones> <directorio_salida> <archivo_resultados> [block_size]
+  # Ejemplo
+  ./dbscan --benchmark 0.03 10 10 data/output data/results/experiments.csv 512
+  ```
+
+- **Generación y análisis**: usa `notebooks/experiments.ipynb` para crear datasets y gráficas; `notebooks/DBSCAN_noise.ipynb` visualiza etiquetas.
+
+## Estructura del repositorio
+
+```txt
+├── include/
+│   └── dbscan.hpp
+├── src/
+│   ├── main.cpp
+│   ├── serial.cpp
+│   ├── parallel_1.cpp
+│   └── parallel_2.cpp
+├── data/
+│   ├── input/
+│   ├── output/
+│   └── results/
+├── notebooks/
+│   ├── experiments.ipynb
+│   └── DBSCAN_noise.ipynb
+├── docs/
+│   ├── informe_codigo.md
+│   └── informe_experimental.md
+└── README.md
+```
