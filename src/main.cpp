@@ -13,48 +13,37 @@
 
 namespace fs = std::filesystem;
 
-namespace
-{
-
-    std::size_t countMismatches(const std::vector<Point> &a, const std::vector<Point> &b)
-    {
-        if (a.size() != b.size())
-        {
+namespace {
+    std::size_t countMismatches(const std::vector<Point> &a, const std::vector<Point> &b) {
+        if (a.size() != b.size()) {
             return std::max(a.size(), b.size());
         }
         std::size_t mismatches = 0;
-        for (std::size_t i = 0; i < a.size(); ++i)
-        {
-            if (a[i].label != b[i].label)
-            {
+        for (std::size_t i = 0; i < a.size(); ++i) {
+            if (a[i].label != b[i].label) {
                 ++mismatches;
             }
         }
         return mismatches;
     }
 
-    struct Stats
-    {
+    struct Stats {
         double mean{};
         double stdev{};
     };
 
-    Stats computeStats(const std::vector<double> &tiempos)
-    {
-        if (tiempos.empty())
-        {
+    Stats computeStats(const std::vector<double> &tiempos) {
+        if (tiempos.empty()) {
             return {0.0, 0.0};
         }
         double suma = 0.0;
-        for (double t : tiempos)
-        {
+        for (double t : tiempos) {
             suma += t;
         }
         const double mean = suma / static_cast<double>(tiempos.size());
 
         double var = 0.0;
-        for (double t : tiempos)
-        {
+        for (double t : tiempos) {
             const double diff = t - mean;
             var += diff * diff;
         }
@@ -68,12 +57,10 @@ namespace
                     int iterations,
                     std::vector<double> &tiempos,
                     const std::string &output_dir,
-                    std::vector<Point> &ultimo_serial)
-    {
+                    std::vector<Point> &ultimo_serial) {
         tiempos.clear();
         tiempos.reserve(iterations);
-        for (int i = 0; i < iterations; ++i)
-        {
+        for (int i = 0; i < iterations; ++i) {
             const double inicio = omp_get_wtime();
             ultimo_serial = dbscan_serial(ruta, epsilon, min_samples);
             tiempos.push_back(omp_get_wtime() - inicio);
@@ -92,16 +79,13 @@ namespace
                           std::vector<double> &tiempos,
                           const std::string &output_dir,
                           std::vector<Point> &ultimo,
-                          const std::vector<Point> &referencia_serial)
-    {
-        if (threads > 0)
-        {
+                          const std::vector<Point> &referencia_serial) {
+        if (threads > 0) {
             omp_set_num_threads(threads);
         }
         tiempos.clear();
         tiempos.reserve(iterations);
-        for (int i = 0; i < iterations; ++i)
-        {
+        for (int i = 0; i < iterations; ++i) {
             const double inicio = omp_get_wtime();
             ultimo = dbscan_parallel_full(ruta, epsilon, min_samples, threads);
             tiempos.push_back(omp_get_wtime() - inicio);
@@ -111,8 +95,7 @@ namespace
         std::cout << "  -> paralelo1 guardó: " << salida << '\n';
 
         const std::size_t mismatches = countMismatches(referencia_serial, ultimo);
-        if (mismatches != 0)
-        {
+        if (mismatches != 0) {
             std::cout << "  (!) " << mismatches
                       << " etiquetas difieren entre serial y paralelo1.\n";
         }
@@ -129,16 +112,13 @@ namespace
                              std::vector<double> &tiempos,
                              const std::string &output_dir,
                              std::vector<Point> &ultimo,
-                             const std::vector<Point> &referencia_serial)
-    {
-        if (threads > 0)
-        {
+                             const std::vector<Point> &referencia_serial) {
+        if (threads > 0) {
             omp_set_num_threads(threads);
         }
         tiempos.clear();
         tiempos.reserve(iterations);
-        for (int i = 0; i < iterations; ++i)
-        {
+        for (int i = 0; i < iterations; ++i) {
             const double inicio = omp_get_wtime();
             ultimo = dbscan_parallel_divided(ruta, epsilon, min_samples, threads, block_size);
             tiempos.push_back(omp_get_wtime() - inicio);
@@ -148,8 +128,7 @@ namespace
         std::cout << "  -> paralelo2 guardó: " << salida << '\n';
 
         const std::size_t mismatches = countMismatches(referencia_serial, ultimo);
-        if (mismatches != 0)
-        {
+        if (mismatches != 0) {
             std::cout << "  (!) " << mismatches
                       << " etiquetas difieren entre serial y paralelo2.\n";
         }
@@ -159,10 +138,8 @@ namespace
 
 }
 
-int main(int argc, char **argv)
-{
-    if (argc > 1 && std::string(argv[1]) == "--benchmark")
-    {
+int main(int argc, char **argv) {
+    if (argc > 1 && std::string(argv[1]) == "--benchmark") {
         const double epsilon = argc > 2 ? std::stod(argv[2]) : 0.03;
         const int min_samples = argc > 3 ? std::stoi(argv[3]) : 10;
         const int iterations = argc > 4 ? std::stoi(argv[4]) : 10;
@@ -170,8 +147,7 @@ int main(int argc, char **argv)
         const std::string results_file = argc > 6 ? argv[6] : "data/results/experiments.csv";
         const std::size_t block_size = argc > 7 ? static_cast<std::size_t>(std::stoul(argv[7])) : 512;
 
-        const std::vector<std::size_t> sizes = {
-            20000, 40000, 80000, 120000, 140000, 160000, 180000, 200000};
+        const std::vector<std::size_t> sizes = {20000, 40000, 80000, 120000, 140000, 160000, 180000, 200000};
 
         const int virtual_cores = omp_get_max_threads();
         const std::vector<int> thread_options = {
@@ -180,8 +156,7 @@ int main(int argc, char **argv)
             virtual_cores,
             virtual_cores * 2};
 
-        if (!results_file.empty())
-        {
+        if (!results_file.empty()) {
             fs::create_directories(fs::path(results_file).parent_path());
         }
         std::ofstream csv(results_file);
@@ -191,8 +166,7 @@ int main(int argc, char **argv)
         std::vector<double> tiempos_par_full;
         std::vector<double> tiempos_par_div;
 
-        for (std::size_t n : sizes)
-        {
+        for (std::size_t n : sizes) {
             const std::string ruta = "data/input/" + std::to_string(n) + "_data.csv";
             std::cout << "\n=== Tamaño: " << n << " puntos ===\n";
             std::vector<Point> ultimo_serial;
@@ -201,8 +175,7 @@ int main(int argc, char **argv)
                 ruta, epsilon, min_samples, iterations,
                 tiempos_serial, output_dir, ultimo_serial);
 
-            if (ultimo_serial.empty())
-            {
+            if (ultimo_serial.empty()) {
                 std::cout << "  (!) No se pudieron cargar puntos para " << ruta
                           << ". Se omite este tamaño.\n";
                 continue;
@@ -212,8 +185,7 @@ int main(int argc, char **argv)
                 << stats_serial.mean << ',' << stats_serial.stdev << '\n';
             csv.flush();
 
-            for (int threads : thread_options)
-            {
+            for (int threads : thread_options) {
                 std::cout << "  Hilos: " << threads << '\n';
                 std::vector<Point> ultimo_par_full;
                 const Stats stats_par_full = runParallelFull(
@@ -261,10 +233,8 @@ int main(int argc, char **argv)
 
     std::vector<double> tiempos_serial;
     std::vector<Point> resultado_serial;
-    const Stats stats_serial = runSerial(ruta, epsilon, min_samples,
-                                         1, tiempos_serial, output_dir, resultado_serial);
-    if (resultado_serial.empty())
-    {
+    const Stats stats_serial = runSerial(ruta, epsilon, min_samples, 1, tiempos_serial, output_dir, resultado_serial);
+    if (resultado_serial.empty()) {
         std::cout << "No se pudieron cargar puntos desde " << ruta << ".\n";
         return 1;
     }
@@ -286,32 +256,26 @@ int main(int argc, char **argv)
     std::cout << std::fixed << std::setprecision(6);
     std::cout << "Serial:    " << stats_serial.mean << " s\n";
     std::cout << "Paralelo1: " << stats_par_full.mean << " s\n";
-    if (stats_par_full.mean > 0.0)
-    {
+    if (stats_par_full.mean > 0.0) {
         std::cout << "Speedup:   " << (stats_serial.mean / stats_par_full.mean) << "x\n";
     }
     std::cout << "Paralelo2: " << stats_par_div.mean << " s\n";
-    if (stats_par_div.mean > 0.0)
-    {
+    if (stats_par_div.mean > 0.0) {
         std::cout << "Speedup2:  " << (stats_serial.mean / stats_par_div.mean) << "x\n";
     }
 
-    if (mismatches == 0)
-    {
+    if (mismatches == 0) {
         std::cout << "Comparación P1: etiquetas iguales entre serial y paralelo2.\n";
     }
-    else
-    {
+    else {
         std::cout << "Comparación: " << mismatches
                   << " puntos con etiqueta distinta entre serial y paralelo.\n";
     }
 
-    if (mismatches_div == 0)
-    {
+    if (mismatches_div == 0) {
         std::cout << "Comparación P2: etiquetas iguales entre serial y paralelo2.\n";
     }
-    else
-    {
+    else {
         std::cout << "Comparación P2: " << mismatches_div
                   << " puntos con etiqueta distinta entre serial y paralelo2.\n";
     }
