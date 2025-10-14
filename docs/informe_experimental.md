@@ -61,7 +61,10 @@ Otro factor que contribuye al mejor desempeño de P2 es su uso de schedule diná
 La configuración óptima identificada es claramente P2 con 20 hilos. Esta configuración logra el mejor speedup absoluto (6.4x promedio con picos de 6.5x). El hecho de que 20 hilos coincida exactamente con el número de núcleos virtuales no es coincidencia: esta configuración evita tanto la subutilización de recursos (con 10 hilos) como el overhead por sobreasignación (con 40 hilos), logrando el balance óptimo entre grado de paralelismo y recursos de hardware disponibles.
 
 ## 6. Uso responsable y ético de IA generativa
+En el espíritu de transparencia académica y reconociendo el papel creciente de las herramientas de inteligencia artificial en el trabajo científico y técnico, es importante declarar explícitamente cómo se utilizaron estas herramientas en el desarrollo de este proyecto.
 
+- No se utilizaron modelos generativos para fabricar datos sintéticos de desempeño o para generar gráficos artificiales. 
+- Las gráficas fueron generadas mediante código Python escrito por nosotros usando matplotlib.
 - Se empleó ChatGPT para razonamiento y revisión de código. Las decisiones finales se validaron manualmente.
 - Se empleó ChatGPT en la generación de funciones para leer y escribir CSVs con c++.
 - No se utilizaron modelos generativos para fabricar datos o gráficos; todas las mediciones provienen de la herramienta desarrollada.
@@ -91,4 +94,16 @@ Todo el código fuente de C++, incluyendo las tres implementaciones de DBSCAN y 
 
 ## 9. Conclusiones
 
-La división en bloques reduce los cuellos de sincronización y ofrece el mejor speedup con cargas grandes. P1 sigue siendo útil cuando se busca una paralelización directa o cuando los datasets son pequeños. Ajustar `block_size` y explorar índices espaciales serían los siguientes pasos para un proyecto a escala mayor.
+Este trabajo ha demostrado empíricamente que la paralelización efectiva de algoritmos computacionalmente intensivos requiere considerablemente más que simplemente agregar directivas de paralelización al código serial. La comparación entre P1 y P2 ilustra claramente cómo el diseño cuidadoso de la estrategia de paralelización puede resultar en mejoras de desempeño sustanciales.
+
+El hallazgo principal es que P2 supera consistentemente a P1 en todos los escenarios prácticos con 10 o más hilos. Esta superioridad es fundamental, resultando de diferencias en cómo ambas implementaciones manejan la sincronización y el manejo de la matriz. La estrategia de división en bloques demuestra ser esencial para algoritmos con alta dependencia de datos compartidos como DBSCAN.
+
+Hemos identificado que la contención en operaciones atómicas es el principal cuello de botella en la paralelización naive de DBSCAN. P1 realiza operaciones atómicas en cada comparación de distancia positiva, generando miles de millones de sincronizaciones para conjuntos de datos grandes. P2 reduce este número mediante acumulación local, transformando un programa dominado por tiempo de sincronización en uno dominado por tiempo de cómputo útil.
+
+La configuración óptima identificada es P2 con 20 hilos, que coincide exactamente con el número de núcleos virtuales del sistema. Esta configuración logra el mejor speedup (6.4x promedio). Usar más hilos que núcleos (como con 40 hilos) introduce overhead que reduce el speedup, mientras que usar menos hilos (como con 10 hilos) simplemente desperdicia capacidad de procesamiento disponible.
+
+Es importante notar que incluso con estas optimizaciones, los speedups alcanzados están lejos del ideal teórico. Esto refleja limitaciones fundamentales: la Ley de Amdahl nos recuerda que las porciones secuenciales del código limitan el speedup máximo alcanzable, el overhead de OpenMP para creación y sincronización de hilos consume tiempo, etc. Estos factores son inherentes a la naturaleza del problema y el hardware, no deficiencias de la implementación.
+
+Finalmente, el parámetro `block_size` de P2 merece calibración más sistemática. Un estudio paramétrico que varíe este valor en función del tamaño de caché L2 del procesador podría identificar valores óptimos específicos para cada arquitectura. Idealmente, el programa podría detectar automáticamente el tamaño de caché en tiempo de ejecución y ajustar el tamaño de bloque en consecuencia.
+
+En conclusión, este trabajo demuestra que la paralelización efectiva es tanto arte como ciencia, requiriendo profundo entendimiento del algoritmo, el hardware subyacente, y las sutiles interacciones entre ambos. Las mejoras sustanciales de P2 sobre P1 validan el esfuerzo de implementar estrategias de paralelización más sofisticadas cuando el desempeño es crítico.
