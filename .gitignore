@@ -52,7 +52,6 @@ cmake-build*/
 *.dSYM/
 
 # Data/generated
-data/input/*
 !data/output/.gitkeep
 
 # Sistema opertativo
