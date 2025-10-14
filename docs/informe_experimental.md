@@ -44,6 +44,8 @@ Un patrón interesante emerge al analizar el efecto del tamaño de entrada. Para
 
 Las gráficas generadas por la libreta `notebooks/experiments.ipynb` visualizan estos patrones claramente. La primera gráfica muestra el speedup de P1 para diferentes configuraciones de hilos, evidenciando su escalabilidad sublineal. La segunda gráfica muestra los speedups de P2, que aunque tampoco son lineales, se acercan más al comportamiento asintotico ideal. Las subgráficas que comparan ambas estrategias directamente para cada configuración de hilos hacen evidente la ventaja consistente de P2, particularmente en la configuración óptima de 20 hilos.
 
+Como mención adicional, cabe mencionar que para los tamaños definidos en los experimentos, no se observa realmente como el tamaño del conjunto de puntos tiene un efecto en el speedup. Sin embargo, con conjuntos más pequeños si observamos como el speedup es menor.
+
 ## 5. Interpretación
 
 Para comprender por qué P2 supera consistentemente a P1, debemos analizar las diferencias fundamentales en cómo ambas implementaciones abordan la paralelización del cálculo de vecinos.
@@ -52,7 +54,7 @@ P1 implementa una estrategia de paralelización directa: el bucle externo del c�
 
 Cada operación atómica requiere sincronización. El procesador debe garantizar que solo un núcleo modifique la memoria a la vez y potencialmente hacer que hilos esperen en colas de sincronización. Cuando muchos hilos intentan actualizar contadores cercanos en memoria, este overhead de sincronización domina el tiempo de ejecución, explicando por qué P1 escala solo hasta aproximadamente 3-4x incluso con 20 hilos.
 
-P2 ataca estos problemas mediante una estrategia de división en bloques combinada con buffers locales. Conceptualmente, la matriz de comparaciones se divide en bloques de 512×512 puntos. Cada hilo procesa un par de bloques a la vez, pero en lugar de actualizar inmediatamente el arreglo global `vecinos[]`, acumula los conteos en arreglos locales `local_i` y `local_j` que son exclusivos de ese hilo. Solo al finalizar el procesamiento del bloque completo, los valores acumulados se agregan al arreglo global usando operaciones atómicas.
+P2 ataca estos problemas mediante una estrategia de división en bloques combinada con buffers locales. Conceptualmente, la matriz de comparaciones se divide en bloques de 512×512 puntos (en el default). Cada hilo procesa un par de bloques a la vez, pero en lugar de actualizar inmediatamente el arreglo global `vecinos[]`, acumula los conteos en arreglos locales `local_i` y `local_j` que son exclusivos de ese hilo. Solo al finalizar el procesamiento del bloque completo, los valores acumulados se agregan al arreglo global usando operaciones atómicas.
 
 Esta estrategia reduce dramáticamente el número de operaciones atómicas. Con bloques de 512 puntos, un conjunto de 100,000 puntos se divide en aproximadamente 200 bloques. Las operaciones atómicas se reducen a aproximadamente 200 × 512 = 102,400. Esta diferencia no es trivial, es la diferencia entre un programa que pasa la mayor parte de su tiempo esperando en sincronización y uno que realmente ejecuta trabajo útil.
 
@@ -61,19 +63,22 @@ Otro factor que contribuye al mejor desempeño de P2 es su uso de schedule diná
 La configuración óptima identificada es claramente P2 con 20 hilos. Esta configuración logra el mejor speedup absoluto (6.4x promedio con picos de 6.5x). El hecho de que 20 hilos coincida exactamente con el número de núcleos virtuales no es coincidencia: esta configuración evita tanto la subutilización de recursos (con 10 hilos) como el overhead por sobreasignación (con 40 hilos), logrando el balance óptimo entre grado de paralelismo y recursos de hardware disponibles.
 
 ## 6. Uso responsable y ético de IA generativa
+
 En el espíritu de transparencia académica y reconociendo el papel creciente de las herramientas de inteligencia artificial en el trabajo científico y técnico, es importante declarar explícitamente cómo se utilizaron estas herramientas en el desarrollo de este proyecto.
 
-- No se utilizaron modelos generativos para fabricar datos sintéticos de desempeño o para generar gráficos artificiales. 
+- No se utilizaron modelos generativos para fabricar datos sintéticos de desempeño o para generar gráficos artificiales. Toda la experimentación fue realizada en nuestras máquinas, proceso que demoró al rededor de 5 horas.
 - Las gráficas fueron generadas mediante código Python escrito por nosotros usando matplotlib.
-- Se empleó ChatGPT para razonamiento y revisión de código. Las decisiones finales se validaron manualmente.
+- Se empleó ChatGPT para razonamiento y revisión de código (consistencia y mejores prácticas). Las decisiones finales se validaron manualmente.
 - Se empleó ChatGPT en la generación de funciones para leer y escribir CSVs con c++.
-- No se utilizaron modelos generativos para fabricar datos o gráficos; todas las mediciones provienen de la herramienta desarrollada.
+- Se empleó ChatGPT para la escritura de código de la parte experimental, únicamente en la lógica de poder ejecutar todo el experimento con un solo comando.
 
 ## 7. Gráficas
 
 ![speedup 1](img/speedup_p1.png)
 
 ![speedup 2](img/speedup_p2.png)
+
+![speedup hilos](img/speedup_hilos.png)
 
 - Las figuras también pueden observarse en `notebooks/experiments.ipynb`.
 - `notebooks/DBSCAN_noise.ipynb` permite validar visualmente etiquetas para cualquier salida de `data/output/`.
@@ -84,13 +89,11 @@ Para garantizar reproducibilidad completa de este trabajo, todos los datos exper
 
 `data/results/experiments.csv` contiene la tabla consolidada de todos los resultados experimentales. Cada fila representa una configuración única de (tamaño de entrada, número de hilos, implementación) con su tiempo promedio de ejecución y desviación estándar calculados sobre 10 repeticiones.
 
-El directorio `data/output/` contiene archivos CSV individuales con las etiquetas asignadas por cada implementación para cada tamaño de entrada. Los nombres de archivo siguen el patrón `<n>_results_{serial|parallel_full|parallel_divided}.csv`. Cada archivo contiene las coordenadas (x, y) de cada punto junto con su etiqueta final (0 para NOISE, 1 para CORE1, 2 para CORE2). Estos archivos fueron utilizados para validar que las tres implementaciones producen resultados idénticos.
+El directorio `data/output/` contiene archivos CSV individuales con las etiquetas asignadas por cada implementación para cada tamaño de entrada. Los nombres de archivo siguen el patrón `<n>_results_{serial|parallel_full|parallel_divided}.csv`. Cada archivo contiene las coordenadas (x, y) de cada punto junto con su etiqueta final (-1 para NOISE, 1 para CORE1, 2 para CORE2). Estos archivos fueron utilizados para validar que las tres implementaciones producen resultados idénticos.
 
 El directorio `data/input/` contiene los datasets sintéticos generados con `make_blobs`. Estos archivos son reutilizables para experimentos adicionales con diferentes parámetros de DBSCAN o para validación cruzada de otras implementaciones del algoritmo.
 
 El directorio `notebooks/` contiene las libretas de Jupyter que implementan tanto la generación de datos como el análisis de resultados. `experiments.ipynb` genera los datasets sintéticos, procesa el archivo `experiments.csv` para calcular speedups, y produce todas las visualizaciones presentadas en este documento. `DBSCAN_noise.ipynb` proporciona herramientas de visualización interactiva para inspeccionar visualmente las clasificaciones producidas por cualquier implementación. Estas libretas están completamente documentadas con comentarios explicando cada paso del análisis, facilitando su reutilización o adaptación para experimentos futuros.
-
-Todo el código fuente de C++, incluyendo las tres implementaciones de DBSCAN y el framework de benchmarking, está disponible junto con un Makefile para compilación reproducible. Los compiladores y versiones de bibliotecas utilizados están documentados en el README del proyecto.
 
 ## 9. Conclusiones
 
